@@ -112,13 +112,13 @@ int main() {
   puts("Connected\n");
 
   //Send some data
-  message = "GET /?st=1 HTTP/1.1\r\nHost: www.fnordware.com/superpng/pnggrad8rgb.png\r\n\r\n";
+  message = "GET /superpng/pnggrad8rgb.png HTTP/1.1\r\nHost: www.fnordware.com\r\n\r\n";
   if( send(socket_desc , message , strlen(message) , 0) < 0)
   {
     puts("Send failed");
     return 1;
   }
-  puts("Data Send\n");
+  puts("Data Sent\n");
 
 
   //receive data
