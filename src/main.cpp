@@ -2,21 +2,26 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <string>
-#include <iostream>
 #include <sys/time.h>
 #include <arpa/inet.h>
-#include "lodepng/lodepng.h"
-#include <cstring>
 #include <string.h>
 
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <iterator>
+#include <vector>
+#include <algorithm>
+
+#include "lodepng/lodepng.h"
 
 #define CHUNK_SIZE 1024
 #define PNG_SIZE 976 //TODO should by dynamic
 
 
 // get data from here
-void decodePng(std::vector<unsigned char>& png) {
+std::vector<unsigned char> decodePng(std::vector<unsigned char>& png) {
 
 //  std::vector<unsigned char> png;
   std::vector<unsigned char> image; //the raw pixels
@@ -30,6 +35,7 @@ void decodePng(std::vector<unsigned char>& png) {
   //if there's an error, display it
   if(error) std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
 
+  return image;
 }
 
 
@@ -150,7 +156,13 @@ int main() {
   std::vector<unsigned char> png(content,content+976);
 
   //decode data
-  decodePng(png);
+  std::vector<unsigned char> img = decodePng(png);
 
+  //write results
+  std::ofstream outfile ("decode.rgba",std::ofstream::binary);
+
+
+  outfile.write((char*)&img[0],img.size());
+  outfile.close();
   return 0;
 }
