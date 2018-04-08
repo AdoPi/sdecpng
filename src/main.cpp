@@ -5,13 +5,14 @@
 #include <string>
 #include <iostream>
 #include <sys/time.h>
-#include<arpa/inet.h>
+#include <arpa/inet.h>
 #include "lodepng/lodepng.h"
 #include <cstring>
 #include <string.h>
 
 
 #define CHUNK_SIZE 1024
+#define PNG_SIZE 976 //TODO should by dynamic
 
 
 // get data from here
@@ -76,7 +77,7 @@ int recv_timeout(int s , int timeout, uint8_t* data)
     }
     else
     {
-      memcpy(data+total_size,chunk,total_size);
+      memcpy(data+total_size,chunk,size_recv);
       total_size += size_recv;
       printf("%s" , chunk);
       //reset beginning time
@@ -84,6 +85,10 @@ int recv_timeout(int s , int timeout, uint8_t* data)
     }
   }
 
+
+  data[total_size] = '\0';
+
+  
   return total_size;
 }
 
@@ -132,8 +137,9 @@ int main() {
   printf("received:%d\n",nb_received);
 
   //remove http headers
-  char *content = std::strstr((char*)fhd_png, "\r\n\r\n");
+  char *content = strstr((char*)fhd_png, "\r\n\r\n");
   if (content != NULL) {
+//    content += strlen("image/png\r\n");
     content += 4; // Offset by 4 bytes to start of content
   }
   else {
@@ -141,7 +147,7 @@ int main() {
   }
 
   printf("strlen content:%d\n",strlen(content));
-  std::vector<unsigned char> png(content,content+strlen(content));
+  std::vector<unsigned char> png(content,content+976);
 
   //decode data
   decodePng(png);
