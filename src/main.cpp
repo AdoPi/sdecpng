@@ -17,16 +17,14 @@
 #include "lodepng/lodepng.h"
 
 #define CHUNK_SIZE 1024
-#define PNG_SIZE 976 //TODO should by dynamic
+#define PNG_SIZE 976 //TODO should be dynamic
 
 
 // get data from here
 std::vector<unsigned char> decodePng(std::vector<unsigned char>& png) {
 
-//  std::vector<unsigned char> png;
   std::vector<unsigned char> image; //the raw pixels
   unsigned width, height;
-
 
   puts("prepare to decode");
   //decode
@@ -91,10 +89,8 @@ int recv_timeout(int s , int timeout, uint8_t* data)
     }
   }
 
-
   data[total_size] = '\0';
 
-  
   return total_size;
 }
 
@@ -159,7 +155,6 @@ int main() {
 
   //write results
   std::ofstream outfile ("decode.rgba",std::ofstream::binary);
-
 
   outfile.write((char*)&img[0],img.size());
   outfile.close();
