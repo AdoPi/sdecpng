@@ -145,7 +145,6 @@ int main() {
   //remove http headers
   char *content = strstr((char*)fhd_png, "\r\n\r\n");
   if (content != NULL) {
-//    content += strlen("image/png\r\n");
     content += 4; // Offset by 4 bytes to start of content
   }
   else {
@@ -153,7 +152,7 @@ int main() {
   }
 
   printf("strlen content:%d\n",strlen(content));
-  std::vector<unsigned char> png(content,content+976);
+  std::vector<unsigned char> png(content,content+PNG_SIZE);
 
   //decode data
   std::vector<unsigned char> img = decodePng(png);
