@@ -5,20 +5,24 @@
 #include <string>
 #include <iostream>
 #include <sys/time.h>
-#include "lodepng/lodepng.h"
 #include<arpa/inet.h>
+#include "lodepng/lodepng.h"
+#include <cstring>
+#include <string.h>
 
 
 #define CHUNK_SIZE 1024
 
 
 // get data from here
-void decodePng() {
+void decodePng(std::vector<unsigned char>& png) {
 
-  std::vector<unsigned char> png;
+//  std::vector<unsigned char> png;
   std::vector<unsigned char> image; //the raw pixels
   unsigned width, height;
 
+
+  puts("prepare to decode");
   //decode
   unsigned error = lodepng::decode(image, width, height, png);
 
@@ -72,6 +76,7 @@ int recv_timeout(int s , int timeout, uint8_t* data)
     }
     else
     {
+      memcpy(data+total_size,chunk,total_size);
       total_size += size_recv;
       printf("%s" , chunk);
       //reset beginning time
@@ -122,10 +127,24 @@ int main() {
 
 
   //receive data
-  recv_timeout(socket_desc,5,fhd_png);
+  int nb_received = recv_timeout(socket_desc,1,fhd_png);
+  
+  printf("received:%d\n",nb_received);
+
+  //remove http headers
+  char *content = std::strstr((char*)fhd_png, "\r\n\r\n");
+  if (content != NULL) {
+    content += 4; // Offset by 4 bytes to start of content
+  }
+  else {
+    content = (char*)fhd_png; // Didn't find end of header, write out everything
+  }
+
+  printf("strlen content:%d\n",strlen(content));
+  std::vector<unsigned char> png(content,content+strlen(content));
 
   //decode data
-  decodePng();
+  decodePng(png);
 
   return 0;
 }

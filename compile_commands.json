@@ -1,0 +1,38 @@
+[
+    {
+        "arguments": [
+            "c++", 
+            "-c", 
+            "-ansi", 
+            "-pedantic", 
+            "-Wall", 
+            "-Wextra", 
+            "-O3", 
+            "-I", 
+            "include", 
+            "-o", 
+            "main", 
+            "src/lodepng.cpp"
+        ], 
+        "directory": "/Volumes/Macintosh/Users/Adonis/sdecpng", 
+        "file": "src/lodepng.cpp"
+    }, 
+    {
+        "arguments": [
+            "c++", 
+            "-c", 
+            "-ansi", 
+            "-pedantic", 
+            "-Wall", 
+            "-Wextra", 
+            "-O3", 
+            "-I", 
+            "include", 
+            "-o", 
+            "main", 
+            "src/main.cpp"
+        ], 
+        "directory": "/Volumes/Macintosh/Users/Adonis/sdecpng", 
+        "file": "src/main.cpp"
+    }
+]
