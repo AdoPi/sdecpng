@@ -13,150 +13,137 @@
 #include <iterator>
 #include <vector>
 #include <algorithm>
+#include <array>
 
-#include "lodepng/lodepng.h"
-
-#define CHUNK_SIZE 1024
-#define PNG_SIZE 976 //TODO should be dynamic
+#include "png.h"
 
 
-// get data from here
-std::vector<unsigned char> decodePng(std::vector<unsigned char>& png) {
+//png checker
+#define PNGSIGSIZE 8
 
-  std::vector<unsigned char> image; //the raw pixels
-  unsigned width, height;
+bool validate(std::istream& source) {
 
-  puts("prepare to decode");
-  //decode
-  unsigned error = lodepng::decode(image, width, height, png);
+	//Allocate a buffer of 8 bytes, where we can put the file signature.
+	png_byte pngsig[PNGSIGSIZE];
+	int is_png = 0;
 
-  //if there's an error, display it
-  if(error) std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+	//Read the 8 bytes from the stream into the sig buffer.
+	source.read((char*)pngsig, PNGSIGSIZE);
 
-  return image;
+	//Check if the read worked...
+	if (!source.good()) return false;
+
+	//Let LibPNG check the sig. If this function returns 0, everything is OK.
+	is_png = png_sig_cmp(pngsig, 0, PNGSIGSIZE);
+	return (is_png == 0);
 }
 
 
-/*
-   Receive data in multiple chunks by checking a non-blocking socket
-   Timeout in seconds
-   */
-int recv_timeout(int s , int timeout, uint8_t* data)
-{
-  int size_recv , total_size= 0;
-  struct timeval begin , now;
-  char chunk[CHUNK_SIZE];
-  double timediff;
-
-  //make socket non blocking
-  fcntl(s, F_SETFL, O_NONBLOCK);
-
-  //beginning time
-  gettimeofday(&begin , NULL);
-
-  while(1)
-  {
-    gettimeofday(&now , NULL);
-
-    //time elapsed in seconds
-    timediff = (now.tv_sec - begin.tv_sec) + 1e-6 * (now.tv_usec - begin.tv_usec);
-
-    //if you got some data, then break after timeout
-    if( total_size > 0 && timediff > timeout )
-    {
-      break;
-    }
-
-    //if you got no data at all, wait a little longer, twice the timeout
-    else if( timediff > timeout*2)
-    {
-      //      break; // no break here in streamer
-    }
-
-    memset(chunk ,0 , CHUNK_SIZE);  //clear the variable
-    if((size_recv =  recv(s , chunk , CHUNK_SIZE , 0) ) < 0)
-    {
-      //if nothing was received then we want to wait a little before trying again, 0.1 seconds
-      usleep(100000);
-    }
-    else
-    {
-      memcpy(data+total_size,chunk,size_recv);
-      total_size += size_recv;
-      printf("%s" , chunk);
-      //reset beginning time
-      gettimeofday(&begin , NULL);
-    }
-  }
-
-  data[total_size] = '\0';
-
-  return total_size;
+// thread here ?
+void userReadData(png_structp pngPtr, png_bytep data, png_size_t length) {
+    //Here we get our IO pointer back from the read struct.
+    //This is the parameter we passed to the png_set_read_fn() function.
+    //Our std::istream pointer.
+    png_voidp a = png_get_io_ptr(pngPtr);
+    //Cast the pointer to std::istream* and read 'length' bytes into 'data'
+    ((std::istream*)a)->read((char*)data, length);
 }
-
 
 int main() {
-  uint8_t fhd_png[1280*1920];
 
-  //socket logic
-  int socket_desc;
-  struct sockaddr_in server;
-  char *message;
+	//so First, we validate our stream with the validate function I just mentioned
+	if (!validate(std::cin)) {
+		std::cerr << "ERROR: Data is not valid PNG-data" << std::endl;
+		return -1; //Do your own error recovery/handling here
+	}
 
-  //Create socket
-  socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-  if (socket_desc == -1)
-  {
-    printf("Could not create socket");
-  }
+	//Here we create the png read struct. The 3 NULL's at the end can be used
+	//for your own custom error handling functions, but we'll just use the default.
+	//if the function fails, NULL is returned. Always check the return values!
+	png_structp pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!pngPtr) {
+		std::cerr << "ERROR: Couldn't initialize png read struct" << std::endl;
+		return false; //Do your own error recovery/handling here
+	}
 
-  server.sin_addr.s_addr = inet_addr("66.117.151.35");
-  server.sin_family = AF_INET;
-  server.sin_port = htons( 80 );
-
-  //Connect to remote server
-  if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
-  {
-    puts("connect error");
-    return 1;
-  }
-
-  puts("Connected\n");
-
-  //Send some data
-  message = "GET /superpng/pnggrad8rgb.png HTTP/1.1\r\nHost: www.fnordware.com\r\n\r\n";
-  if( send(socket_desc , message , strlen(message) , 0) < 0)
-  {
-    puts("Send failed");
-    return 1;
-  }
-  puts("Data Sent\n");
+	//Here we create the png info struct.
+	//Note that this time, if this function fails, we have to clean up the read struct!
+	png_infop infoPtr = png_create_info_struct(pngPtr);
+	if (!infoPtr) {
+		std::cerr << "ERROR: Couldn't initialize png info struct" << std::endl;
+		png_destroy_read_struct(&pngPtr, (png_infopp)0, (png_infopp)0);
+		return false; //Do your own error recovery/handling here
+	}
 
 
-  //receive data
-  int nb_received = recv_timeout(socket_desc,1,fhd_png);
-  
-  printf("received:%d\n",nb_received);
+	// read from std::cin
+	png_set_read_fn(pngPtr,(png_voidp)&std::cin, userReadData);
 
-  //remove http headers
-  char *content = strstr((char*)fhd_png, "\r\n\r\n");
-  if (content != NULL) {
-    content += 4; // Offset by 4 bytes to start of content
-  }
-  else {
-    content = (char*)fhd_png; // Didn't find end of header, write out everything
-  }
+	//Set the amount signature bytes we've already read:
+    //We've defined PNGSIGSIZE as 8;
+    png_set_sig_bytes(pngPtr, PNGSIGSIZE);
 
-  printf("strlen content:%d\n",strlen(content));
-  std::vector<unsigned char> png(content,content+PNG_SIZE);
+    //Now call png_read_info with our pngPtr as image handle, and infoPtr to receive the file info.
+    png_read_info(pngPtr, infoPtr);
 
-  //decode data
-  std::vector<unsigned char> img = decodePng(png);
+	//read some data from the png
+    png_uint_32 imgWidth =  png_get_image_width(pngPtr, infoPtr);
+    png_uint_32 imgHeight = png_get_image_height(pngPtr, infoPtr);
 
-  //write results
-  std::ofstream outfile ("decode.rgba",std::ofstream::binary);
+    //bits per CHANNEL! note: not per pixel!
+    png_uint_32 bitdepth   = png_get_bit_depth(pngPtr, infoPtr);
+    //Number of channels
+    png_uint_32 channels   = png_get_channels(pngPtr, infoPtr);
+    //Color type. (RGB, RGBA, Luminance, luminance alpha... palette... etc)
+    png_uint_32 color_type = png_get_color_type(pngPtr, infoPtr);
 
-  outfile.write((char*)&img[0],img.size());
-  outfile.close();
-  return 0;
+
+	printf("width=%d, height=%d\n",imgWidth,imgHeight);
+
+
+	// READING BITMAP
+
+
+
+	//Here's one of the pointers we've defined in the error handler section:
+    //Array of row pointers. One for every row.
+    png_bytep* rowPtrs = new png_bytep[imgHeight];
+
+    //Alocate a buffer with enough space.
+    //(Don't use the stack, these blocks get big easilly)
+    //This pointer was also defined in the error handling section, so we can clean it up on error.
+	int dataSize = imgWidth * imgHeight * bitdepth * channels / 8;
+    char* data = new char[dataSize];
+    //This is the length in bytes, of one row.
+    const unsigned int stride = imgWidth * bitdepth * channels / 8;
+
+    //A little for-loop here to set all the row pointers to the starting
+    //Adresses for every row in the buffer
+
+    for (size_t i = 0; i < imgHeight; i++) {
+        //Set the pointer to the data pointer + i times the row stride.
+        //Notice that the row order is reversed with q.
+        //This is how at least OpenGL expects it,
+        //and how many other image loaders present the data.
+        png_uint_32 q = (imgHeight- i - 1) * stride;
+        rowPtrs[i] = (png_bytep)data + q;
+	}
+
+    //And here it is! The actuall reading of the image!
+    //Read the imagedata and write it to the adresses pointed to
+    //by rowptrs (in other words: our image databuffer)
+    png_read_image(pngPtr, rowPtrs);
+
+
+	//here write raw image
+
+	std::ofstream outfile ("image.rgb24",std::ofstream::binary);
+
+  // write to outfile
+  outfile.write (data,dataSize);
+
+
+
+	return 0;
 }
+
