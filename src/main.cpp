@@ -84,7 +84,7 @@ int main() {
 		png_uint_32 imgHeight = png_get_image_height(currentPng, pngInfo);
 		png_uint_32 bitdepth   = png_get_bit_depth(currentPng, pngInfo);
 		png_uint_32 channels   = png_get_channels(currentPng, pngInfo);
-		png_uint_32 color_type = png_get_color_type(currentPng, pngInfo);
+		//png_uint_32 color_type = png_get_color_type(currentPng, pngInfo);
 
 
 		std::cout << "width=" << imgWidth << ", height=" << imgHeight << std::endl;
@@ -108,6 +108,10 @@ int main() {
 		outfile.write (data,dataSize);
 
 		outfile.close();
+
+
+    // read end of png
+    png_read_end(currentPng, pngInfo);
 
 		// clean up
 		delete[] (png_bytep)rowPtrs;
