@@ -45,8 +45,6 @@ int main() {
 	// Looper
 	while(true) {
 
-		// end of stream
-
 		// validate if we have a correct png file
 		if (!is_png(std::cin)) {
 			if (!frames) {
@@ -104,7 +102,7 @@ int main() {
 		png_read_image(currentPng, rowPtrs);
 
 		//here write raw image
-		std::ofstream outfile ("image.rgb24",std::ofstream::binary);
+		std::ofstream outfile ("image"+frames+".rgb24",std::ofstream::binary);
 		outfile.write (data,dataSize);
 
 		outfile.close();
