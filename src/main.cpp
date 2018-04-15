@@ -102,7 +102,9 @@ int main() {
 		png_read_image(currentPng, rowPtrs);
 
 		//here write raw image
-		std::ofstream outfile ("image"+frames+".rgb24",std::ofstream::binary);
+		std::string filename;
+		filename << "image" << frames << ".rgb24";
+		std::ofstream outfile (filename,std::ofstream::binary);
 		outfile.write (data,dataSize);
 
 		outfile.close();
