@@ -1,4 +1,4 @@
-#simple makefile to build this work in progress tool
+#simple makefile to build sdecpng
 
 sdecpng:
 	g++ src/main.cpp -O3  -Wc++11-extensions -lpng -I include -o sdecpng
